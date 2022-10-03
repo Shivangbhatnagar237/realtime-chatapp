@@ -278,7 +278,7 @@ textarea:focus {
 .online-people {
   width: 14vw;
   height: 30vh;
-  overflow-y: auto;
+  overflow: auto;
   /* background-color: red; */
   border-radius: 15px;
   border: 0.3px solid black;
