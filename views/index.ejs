@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SocketIO</title>
+  <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+
+<body>
+  <div id="main">
+    <div class="overlay">
+      <div class="name-input">
+        <h3>Enter your nickname below</h3>
+        <div class="uname-input">
+          <input type="text" name="username" id="username" placeholder="Enter name" autocomplete="off">
+          <div class="enter-chat">
+            <ion-icon name="arrow-forward-outline"></ion-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="messages">
+      <div class="typing-message">
+        <h4></h4>
+      </div>
+    </div>
+    <div class="type-message">
+      <textarea id="msg-typed" placeholder="Type and send a message! ⌨"></textarea>
+    </div>
+    <div class="send-message btn">
+      <h3>Send Message</h3>
+    </div>
+    <div class="online-people">
+      <div class="online-nav">
+        <h3>Online People (<span>0</span>)</h3>
+      </div>
+      <div class="names">
+      </div>
+    </div>
+  </div>
+  <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.27.2/axios.min.js"
+    integrity="sha512-odNmoc1XJy5x1TMVMdC7EMs3IVdItLPlCeL5vSUPN2llYKMJ2eByTTAIiiuqLg+GdNr9hF6z81p27DArRFKT7A=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.2/socket.io.js"
+    integrity="sha512-VJ6+sp2E5rFQk05caiXXzQd1wBABpjEj1r5kMiLmGAAgwPItw1YpqsCCBtq8Yr1x6C49/mTpRdXtq8O2RcZhlQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script>
+    var socket = io();
+
+    var userinput = document.querySelector('.name-input input');
+    var enterchat = document.querySelector('.enter-chat');
+
+    window.addEventListener('load', function () {
+      if (userinput.value.trim().length === 0) {
+        setTimeout(() => userinput.placeholder = 'Enter something 😅', 8000);
+      }
+      userinput.focus();
+    })
+
+    var msg = document.querySelector('textarea');
+
+    userinput.addEventListener('keydown', function (dets) {
+      if (userinput.value.trim().length > 0 && userinput.value.trim().length <= 9 && dets.keyCode === 13) {
+        enterchat.click();
+        document.querySelector('.overlay').style.transform = 'translateX(-100%)';
+        // }
+        socket.emit('newUser', userinput.value);
+        userinput.blur();
+      }
+    })
+
+    enterchat.addEventListener('click', function () {
+      if (userinput.value.trim().length > 0) {
+        document.querySelector('.overlay').style.transform = 'translateX(-100%)';
+        socket.emit('newUser', userinput.value);
+      }
+    })
+
+    var btn = document.querySelector('.send-message');
+    let that;
+
+    msg.addEventListener('input', function () {
+      that = this;
+    })
+
+    btn.addEventListener('click', function () {
+      if (that.value.trim().length > 0) {
+        socket.emit('newMessage', that.value);
+        msg.value = '';
+      }
+    })
+
+    msg.addEventListener('keydown', function (dets) {
+      if (dets.keyCode === 13) {
+        btn.style.setProperty('--translate', 'translate(3px, 3px)');
+        setTimeout(function () {
+          btn.style.setProperty('--translate', 'translate(0px, 0px)');
+        }, 200);
+        btn.click();
+      }
+    })
+
+    function scrollToBottom() {
+      // const range = 40;
+      const element = document.querySelector('.messages');
+      element.scrollTop = element.scrollHeight;
+    }
+
+    socket.on('newMessage', (data, name) => {
+      document.querySelector('.messages').innerHTML += `<h3>${data.user}</h3>
+      <div class="message">
+        ${data.data}
+      </div>`;
+      scrollToBottom();
+    });
+
+
+
+    let online = document.querySelector('.online-people');
+    let onlinenav = document.querySelector('.online-nav');
+    online.addEventListener('click', function () {
+      this.classList.toggle('hide-names');
+      onlinenav.classList.toggle('toggle-border');
+    })
+
+    socket.on('onlineUsers', function (namearr) {
+      let clutter = ``;
+      namearr.forEach(function (elem) {
+        clutter += `<div class="name">
+          <h4>${elem} 🟢</h4>
+        </div>`;
+      });
+      if (namearr.length > 0) {
+        document.querySelector('.online-nav').innerHTML = `<h3>Online People (<span>${namearr.length}</span>)</h3>`;
+      }
+      document.querySelector('.names').innerHTML = clutter;
+    })
+
+    msg.addEventListener('input', function () {
+      socket.emit('typing');
+    })
+
+    let timeout;
+    socket.on('typing', function (data) {
+      clearTimeout(timeout);
+      document.querySelector('.messages .typing-message h4').textContent = `${data.user} is typing...`;
+      timeout = setTimeout(() => {
+        document.querySelector('.messages .typing-message h4').textContent = ``;
+      }, 1000);
+    })
+  </script>
+</body>
+
+</html>
